@@ -137,10 +137,8 @@ func parseAndRollWithFortune(prompt string) ([]int, string, error) {
 		return nil, "", err
 	}
 
-	// Include the modifier in the result string
-	finalResult := fmt.Sprintf("%s + %d = %d", details, modifier, highest+modifier)
-
-	return []int{highest}, finalResult, nil
+	// ✅ FIX: Return details directly (it already includes modifier)
+	return []int{highest}, details, nil
 }
 
 func parseAndRollWithMisfortune(prompt string) ([]int, string, error) {
@@ -165,8 +163,6 @@ func parseAndRollWithMisfortune(prompt string) ([]int, string, error) {
 		return nil, "", err
 	}
 
-	// Include the modifier in the result string
-	finalResult := fmt.Sprintf("%s + %d = %d", details, modifier, lowest+modifier)
-
-	return []int{lowest}, finalResult, nil
+	// ✅ FIX: Return details directly (it already includes modifier)
+	return []int{lowest}, details, nil
 }

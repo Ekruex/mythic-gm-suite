@@ -147,9 +147,9 @@ func FormatRollResult(results []int, modifier int) string {
 	// Append the modifier separately
 	if modifier != 0 {
 		if modifier > 0 {
-			parts = append(parts, fmt.Sprintf("+ %d", modifier))
+			parts = append(parts, fmt.Sprintf("%d", modifier))
 		} else {
-			parts = append(parts, fmt.Sprintf("- %d", -modifier))
+			parts = append(parts, fmt.Sprintf("%d", -modifier))
 		}
 	}
 
