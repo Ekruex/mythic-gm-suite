@@ -13,6 +13,8 @@ import (
 
 func main() {
 	http.HandleFunc("/api/roll", handleRoll)
+	http.HandleFunc("/api/fortune", handleFortune)
+	http.HandleFunc("/api/misfortune", handleMisfortune)
 	http.HandleFunc("/api/history", handleHistory)
 	http.HandleFunc("/api/clear-history", handleClearHistory)
 
@@ -39,8 +41,44 @@ func handleRoll(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Roll Result: %s", result)
 }
 
+func handleFortune(w http.ResponseWriter, r *http.Request) {
+	prompt := r.URL.Query().Get("prompt")
+	if prompt == "" {
+		http.Error(w, "Missing roll prompt", http.StatusBadRequest)
+		return
+	}
+
+	_, result, err := parseAndRollWithFortune(prompt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "Roll Result: %s", result)
+}
+
+func handleMisfortune(w http.ResponseWriter, r *http.Request) {
+	prompt := r.URL.Query().Get("prompt")
+	if prompt == "" {
+		http.Error(w, "Missing roll prompt", http.StatusBadRequest)
+		return
+	}
+
+	_, result, err := parseAndRollWithMisfortune(prompt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "Roll Result: %s", result)
+}
+
 func handleHistory(w http.ResponseWriter, r *http.Request) {
 	history := roller.GetRollHistory()
+	// Reverse the order of the history entries
+	for i, j := 0, len(history)-1; i < j; i, j = i+1, j-1 {
+		history[i], history[j] = history[j], history[i]
+	}
 	for _, entry := range history {
 		fmt.Fprintf(w, "%s\n", entry)
 	}
@@ -75,4 +113,60 @@ func parseAndRoll(prompt string) ([]int, string, error) {
 	}
 
 	return results, formattedResult, nil
+}
+
+func parseAndRollWithFortune(prompt string) ([]int, string, error) {
+	re := regexp.MustCompile(`(\d*)d(\d+)([+-]\d+)?`)
+	matches := re.FindStringSubmatch(prompt)
+	if len(matches) == 0 {
+		return nil, "", fmt.Errorf("Invalid roll prompt")
+	}
+
+	numDice, _ := strconv.Atoi(matches[1])
+	if numDice != 2 || matches[2] != "20" {
+		return nil, "", fmt.Errorf("Fortune only works with 2d20")
+	}
+	modifier := 0
+	if matches[3] != "" {
+		modifier, _ = strconv.Atoi(matches[3])
+	}
+
+	d := dice.NewDice(20)
+	details, highest, err := roller.RollWithFortune(d, modifier)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Include the modifier in the result string
+	finalResult := fmt.Sprintf("%s + %d = %d", details, modifier, highest+modifier)
+
+	return []int{highest}, finalResult, nil
+}
+
+func parseAndRollWithMisfortune(prompt string) ([]int, string, error) {
+	re := regexp.MustCompile(`(\d*)d(\d+)([+-]\d+)?`)
+	matches := re.FindStringSubmatch(prompt)
+	if len(matches) == 0 {
+		return nil, "", fmt.Errorf("Invalid roll prompt")
+	}
+
+	numDice, _ := strconv.Atoi(matches[1])
+	if numDice != 2 || matches[2] != "20" {
+		return nil, "", fmt.Errorf("Misfortune only works with 2d20")
+	}
+	modifier := 0
+	if matches[3] != "" {
+		modifier, _ = strconv.Atoi(matches[3])
+	}
+
+	d := dice.NewDice(20)
+	details, lowest, err := roller.RollWithMisfortune(d, modifier)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Include the modifier in the result string
+	finalResult := fmt.Sprintf("%s + %d = %d", details, modifier, lowest+modifier)
+
+	return []int{lowest}, finalResult, nil
 }

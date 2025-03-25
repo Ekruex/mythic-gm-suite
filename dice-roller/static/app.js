@@ -1,8 +1,17 @@
 document.addEventListener("DOMContentLoaded", function() {
     const root = document.getElementById("root");
+    let fortuneActive = false;
+    let misfortuneActive = false;
 
     function fetchRoll(prompt) {
-        fetch(`/api/roll?prompt=${encodeURIComponent(prompt)}`)
+        let url = `/api/roll?prompt=${encodeURIComponent(prompt)}`;
+        if (fortuneActive) {
+            url = `/api/fortune?prompt=${encodeURIComponent(prompt)}`;
+        } else if (misfortuneActive) {
+            url = `/api/misfortune?prompt=${encodeURIComponent(prompt)}`;
+        }
+
+        fetch(url)
             .then(response => response.text())
             .then(data => {
                 const rollResult = document.getElementById("rollResult");
@@ -53,6 +62,16 @@ document.addEventListener("DOMContentLoaded", function() {
             <button id="rollButton">Roll</button>
             <button id="clearHistoryButton">Clear History</button>
         </div>
+        <div class="checkbox-grid">
+            <label>
+                <input type="checkbox" id="fortuneCheckbox">
+                Fortune
+            </label>
+            <label>
+                <input type="checkbox" id="misfortuneCheckbox">
+                Misfortune
+            </label>
+        </div>
         <input type="text" id="promptInput" placeholder="Enter roll prompt (e.g., 5d6+12)">
         <div id="rollResult"></div>
         <h2>Roll History</h2>
@@ -101,6 +120,22 @@ document.addEventListener("DOMContentLoaded", function() {
 
     document.getElementById("clearHistoryButton").addEventListener("click", function() {
         clearHistory();
+    });
+
+    document.getElementById("fortuneCheckbox").addEventListener("change", function() {
+        fortuneActive = this.checked;
+        if (fortuneActive) {
+            misfortuneActive = false;
+            document.getElementById("misfortuneCheckbox").checked = false;
+        }
+    });
+
+    document.getElementById("misfortuneCheckbox").addEventListener("change", function() {
+        misfortuneActive = this.checked;
+        if (misfortuneActive) {
+            fortuneActive = false;
+            document.getElementById("fortuneCheckbox").checked = false;
+        }
     });
 
     fetchHistory();

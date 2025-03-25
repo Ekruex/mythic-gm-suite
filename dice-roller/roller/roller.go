@@ -91,9 +91,10 @@ func RollWithFortune(d dice.Dice, modifier ...int) (string, int, error) {
 	}
 
 	details := fmt.Sprintf("%d / %d", r1, r2)
-	storeRoll(fmt.Sprintf("%d", total)) // Store total result in history
+	finalResult := fmt.Sprintf("%s + %d = %d", details, mod, total)
+	storeRoll(finalResult) // Store total result in history
 
-	return details, total, nil
+	return finalResult, total, nil
 }
 
 // RollWithMisfortune rolls two d20s, displays both, and returns the lowest before applying modifiers
@@ -116,9 +117,10 @@ func RollWithMisfortune(d dice.Dice, modifier ...int) (string, int, error) {
 	}
 
 	details := fmt.Sprintf("%d / %d", r1, r2)
-	storeRoll(fmt.Sprintf("%d", total)) // Store total result in history
+	finalResult := fmt.Sprintf("%s + %d = %d", details, mod, total)
+	storeRoll(finalResult) // Store total result in history
 
-	return details, total, nil
+	return finalResult, total, nil
 }
 
 // Helper function to safely retrieve the modifier
@@ -129,6 +131,7 @@ func getModifier(modifier []int) int {
 	return 0
 }
 
+// FormatRollResult formats dice rolls like "7 + 14 + 5 + 3 + 2 = 31"
 func FormatRollResult(results []int, modifier int) string {
 	var parts []string
 
@@ -144,7 +147,7 @@ func FormatRollResult(results []int, modifier int) string {
 	// Append the modifier separately
 	if modifier != 0 {
 		if modifier > 0 {
-			parts = append(parts, fmt.Sprintf("%d", modifier))
+			parts = append(parts, fmt.Sprintf("+ %d", modifier))
 		} else {
 			parts = append(parts, fmt.Sprintf("- %d", -modifier))
 		}
