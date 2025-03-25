@@ -1,0 +1,70 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #0d0d0d; /* Darker background */
+    color: #e0e0e0; /* Light text color */
+}
+
+h1 {
+    text-align: center;
+    color: #ffffff;
+}
+
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.button-grid button {
+    padding: 10px;
+    font-size: 16px;
+    background-color: #333333; /* Lighter grayish buttons */
+    color: #e0e0e0; /* Light text color */
+    border: 1px solid #555555; /* Slightly lighter border */
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.button-grid button:hover {
+    background-color: #555555; /* Slightly lighter on hover */
+}
+
+#promptInput {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    margin-bottom: 20px;
+    background-color: #333333; /* Lighter grayish background */
+    color: #e0e0e0; /* Light text color */
+    border: 1px solid #555555; /* Slightly lighter border */
+    border-radius: 5px;
+}
+
+#rollResult {
+    font-size: 18px;
+    color: #ffffff;
+    margin-bottom: 20px;
+}
+
+#history {
+    font-size: 16px;
+    color: #b0b0b0;
+}
+
+#clearHistoryButton {
+    padding: 10px;
+    font-size: 16px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#clearHistoryButton:hover {
+    background-color: #c82333;
+}
