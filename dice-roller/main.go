@@ -93,7 +93,7 @@ func parseAndRoll(prompt string) ([]int, string, error) {
 	re := regexp.MustCompile(`(\d*)d(\d+)([+-]\d+)?`)
 	matches := re.FindStringSubmatch(prompt)
 	if len(matches) == 0 {
-		return nil, "", fmt.Errorf("Invalid roll prompt")
+		return nil, "", fmt.Errorf("invalid roll prompt")
 	}
 
 	numDice, _ := strconv.Atoi(matches[1])
@@ -119,12 +119,12 @@ func parseAndRollWithFortune(prompt string) ([]int, string, error) {
 	re := regexp.MustCompile(`(\d*)d(\d+)([+-]\d+)?`)
 	matches := re.FindStringSubmatch(prompt)
 	if len(matches) == 0 {
-		return nil, "", fmt.Errorf("Invalid roll prompt")
+		return nil, "", fmt.Errorf("invalid roll prompt")
 	}
 
 	numDice, _ := strconv.Atoi(matches[1])
 	if numDice != 2 || matches[2] != "20" {
-		return nil, "", fmt.Errorf("Fortune only works with 2d20")
+		return nil, "", fmt.Errorf("fortune only works with 2d20")
 	}
 	modifier := 0
 	if matches[3] != "" {
@@ -145,12 +145,12 @@ func parseAndRollWithMisfortune(prompt string) ([]int, string, error) {
 	re := regexp.MustCompile(`(\d*)d(\d+)([+-]\d+)?`)
 	matches := re.FindStringSubmatch(prompt)
 	if len(matches) == 0 {
-		return nil, "", fmt.Errorf("Invalid roll prompt")
+		return nil, "", fmt.Errorf("invalid roll prompt")
 	}
 
 	numDice, _ := strconv.Atoi(matches[1])
 	if numDice != 2 || matches[2] != "20" {
-		return nil, "", fmt.Errorf("Misfortune only works with 2d20")
+		return nil, "", fmt.Errorf("misfortune only works with 2d20")
 	}
 	modifier := 0
 	if matches[3] != "" {
