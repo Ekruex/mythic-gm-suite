@@ -129,7 +129,6 @@ func getModifier(modifier []int) int {
 	return 0
 }
 
-// FormatRollResult formats dice rolls like "7 + 14 + 5 + 3 + 2 = 31"
 func FormatRollResult(results []int, modifier int) string {
 	var parts []string
 
@@ -138,15 +137,29 @@ func FormatRollResult(results []int, modifier int) string {
 		parts = append(parts, fmt.Sprintf("%d", roll))
 	}
 
+	// Debugging: Print intermediate values
+	fmt.Printf("Results: %v\n", results)
+	fmt.Printf("Modifier: %d\n", modifier)
+
 	// Append the modifier separately
-	if modifier > 0 {
-		parts = append(parts, fmt.Sprintf("+ %d", modifier))
-	} else if modifier < 0 {
-		parts = append(parts, fmt.Sprintf("- %d", -modifier))
+	if modifier != 0 {
+		if modifier > 0 {
+			parts = append(parts, fmt.Sprintf("%d", modifier))
+		} else {
+			parts = append(parts, fmt.Sprintf("- %d", -modifier))
+		}
 	}
 
+	// Debugging: Print parts before joining
+	fmt.Printf("Parts before joining: %v\n", parts)
+
 	// Convert to final output string
-	return fmt.Sprintf("%s = %d", strings.Join(parts, " + "), sum(results)+modifier)
+	finalResult := fmt.Sprintf("%s = %d", strings.Join(parts, " + "), sum(results)+modifier)
+
+	// Debugging: Print final result
+	fmt.Printf("Final Result: %s\n", finalResult)
+
+	return finalResult
 }
 
 // Helper function to sum up results
