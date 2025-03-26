@@ -3,6 +3,15 @@ document.addEventListener("DOMContentLoaded", function () {
     let fortuneActive = false;
     let misfortuneActive = false;
 
+    // Intercept the Enter key globally and trigger the Roll button only when focused on the input field
+    document.addEventListener("keydown", function (event) {
+        const activeElement = document.activeElement; // Get the currently focused element
+        if (event.key === "Enter" && activeElement.id === "promptInput") {
+            event.preventDefault(); // Prevent the default behavior of Enter
+            document.getElementById("rollButton").click(); // Simulate a click on the Roll button
+     }
+    });
+
     // Function to handle button clicks and update the promptInput
     function handleButtonClick(event) {
         const value = event.target.getAttribute("data-value");
@@ -71,9 +80,8 @@ document.addEventListener("DOMContentLoaded", function () {
             .then((result) => {
                 document.getElementById("rollResult").textContent = result;
                 // Fetch the updated history after the roll
-            fetchHistory();
+                fetchHistory();
             })
-            
             .catch((error) => {
                 console.error("Error fetching roll result:", error);
                 alert("An error occurred while fetching the roll result. Please try again.");
