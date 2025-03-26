@@ -27,12 +27,26 @@ func main() {
 
 func handleRoll(w http.ResponseWriter, r *http.Request) {
 	prompt := r.URL.Query().Get("prompt")
+	rollType := r.URL.Query().Get("type") // Get the type parameter
+
 	if prompt == "" {
 		http.Error(w, "Missing roll prompt", http.StatusBadRequest)
 		return
 	}
 
-	_, result, err := parseAndRoll(prompt)
+	var result string
+	var err error
+
+	// Determine which roll function to call based on the type parameter
+	switch rollType {
+	case "fortune":
+		_, result, err = parseAndRollWithFortune(prompt)
+	case "misfortune":
+		_, result, err = parseAndRollWithMisfortune(prompt)
+	default:
+		_, result, err = parseAndRoll(prompt)
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

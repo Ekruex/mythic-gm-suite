@@ -5,27 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mythic GM Suite</title>
     <link rel="stylesheet" href="styles.css">
-    <style>
-        .button-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .button-grid button {
-            padding: 10px;
-            font-size: 16px;
-        }
-        #promptInput {
-            width: 100%;
-            padding: 10px;
-            font-size: 16px;
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 <body>
-    <div id="root"></div>
-    <script src="app.js"></script>
+    <h1>Mythic GM Suite</h1>
+    <div class="container">
+        <!-- Dice Buttons and Number Buttons Centered Above Prompt -->
+        <div class="button-container">
+            <div class="dice-buttons">
+                <button data-value="d4">d4</button>
+                <button data-value="d6">d6</button>
+                <button data-value="d8">d8</button>
+                <button data-value="d10">d10</button>
+                <button data-value="d12">d12</button>
+                <button data-value="d20">d20</button>
+                <button data-value="d100">d100</button>
+            </div>
+            <div class="button-grid">
+                <button data-value="1">1</button>
+                <button data-value="2">2</button>
+                <button data-value="3">3</button>
+                <button data-value="4">4</button>
+                <button data-value="5">5</button>
+                <button data-value="6">6</button>
+                <button data-value="7">7</button>
+                <button data-value="8">8</button>
+                <button data-value="9">9</button>
+                <button data-value="0">0</button>
+            </div>
+        </div>
+
+        <!-- Center Section -->
+        <div class="center-section">
+            <input type="text" id="promptInput" placeholder="Enter roll prompt (e.g., 5d6+12)">
+            <div class="checkbox-grid">
+                <label>
+                    <input type="checkbox" id="fortuneCheckbox"> Fortune
+                </label>
+                <label>
+                    <input type="checkbox" id="misfortuneCheckbox"> Misfortune
+                </label>
+            </div>
+            <div id="rollResult"></div>
+            <div class="operator-buttons">
+                <button data-value="+">+</button>
+                <button data-value="-">-</button>
+                <button id="rollButton">Roll</button>
+                <button data-value="clear">Clear</button>
+            </div>
+            <div id="clear-log-container">
+                <button id="clearHistoryButton">Clear History</button>
+            </div>
+        </div>
+    </div> 
+    <div id= "history-container">
+        <h2>Roll History</h2>
+        <div id="history"></div>
+        <script src="app.js"></script>
+    </div>
 </body>
 </html>

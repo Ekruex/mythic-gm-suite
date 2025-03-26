@@ -11,11 +11,76 @@ h1 {
     color: #ffffff;
 }
 
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch; /* Ensures both grids stretch to the same height */
+    width: 100%;
+    max-width: 600px;
+    gap: 10px; /* Ensures a consistent 10px gap between the grids */
+}
+
+.dice-buttons,
 .button-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr); /* 3 buttons per row */
     gap: 10px;
-    margin-bottom: 20px;
+    flex: 1; /* Ensures both grids take up equal space */
+    align-content: stretch; /* Ensures the buttons stretch to fill the grid */
+}
+
+.center-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+#promptInput {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px;
+    font-size: 16px;
+    background-color: #333333; /* Lighter grayish background */
+    color: #e0e0e0; /* Light text color */
+    border: 1px solid #555555; /* Slightly lighter border */
+    border-radius: 5px;
+}
+
+.operator-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 buttons in one row */
+    gap: 10px;
+    margin-bottom: 20px; /* Add spacing below the row */
+}
+
+.operator-buttons button {
+    padding: 10px;
+    font-size: 16px;
+    background-color: #333333; /* Lighter grayish buttons */
+    color: #e0e0e0; /* Light text color */
+    border: 1px solid #555555; /* Slightly lighter border */
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.operator-buttons button:hover {
+    background-color: #555555; /* Slightly lighter on hover */
+}
+
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 buttons per row */
+    gap: 10px;
+    justify-items: stretch; /* Ensures all buttons stretch to fill their grid cells */
 }
 
 .button-grid button {
@@ -26,54 +91,56 @@ h1 {
     border: 1px solid #555555; /* Slightly lighter border */
     border-radius: 5px;
     cursor: pointer;
+    height: 100%; /* Ensures buttons stretch to fill the grid cell */
 }
 
-.button-grid button:hover {
-    background-color: #555555; /* Slightly lighter on hover */
+/* Center the button in the 4th row in the 2nd column */
+.button-grid button[data-value="0"] {
+    grid-column: 2; /* Place the button in the second column */
 }
 
-#promptInput {
-    width: 100%;
+.dice-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 buttons per row */
+    gap: 10px;
+    justify-items: stretch; /* Ensures all buttons stretch to fill their grid cells */
+}
+
+.dice-buttons button {
     padding: 10px;
     font-size: 16px;
-    margin-bottom: 20px;
-    background-color: #333333; /* Lighter grayish background */
+    background-color: #333333; /* Lighter grayish buttons */
     color: #e0e0e0; /* Light text color */
     border: 1px solid #555555; /* Slightly lighter border */
     border-radius: 5px;
+    cursor: pointer;
+    height: 100%; /* Ensures buttons stretch to fill the grid cell */
+}
+
+/* Center the d100 button in the last row */
+.dice-buttons button[data-value="d100"] {
+    grid-column: 2; /* Place the button in the second column */
+}
+
+.button-grid button:hover,
+.dice-buttons button:hover,
+.operator-buttons button:hover {
+    background-color: #555555; /* Slightly lighter on hover */
 }
 
 #rollResult {
+    text-align: center;
     font-size: 18px;
     color: #ffffff;
     margin-bottom: 20px;
-}
-
-#history {
-    font-size: 16px;
-    color: #b0b0b0;
-}
-
-#clearHistoryButton {
-    padding: 10px;
-    font-size: 16px;
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 10px;
-}
-
-#clearHistoryButton:hover {
-    background-color: #c82333;
 }
 
 .checkbox-grid {
     display: flex;
     justify-content: center;
     gap: 20px;
-    margin-bottom: 20px;
+    margin-top: 10px;
+    margin-bottom: 0px;
 }
 
 .checkbox-grid label {
@@ -87,4 +154,40 @@ h1 {
 .checkbox-grid input[type="checkbox"] {
     width: 20px;
     height: 20px;
+}
+
+#history-container {
+    display: flex;
+    flex-direction: column; /* Stack the button and history vertically */
+    align-items: center; /* Center them horizontally */
+    margin-top: 20px; /* Add some spacing above the container */
+}
+
+#history {
+    font-size: 16px;
+    color: #b0b0b0;
+    text-align: center; /* Center the text inside the history */
+    margin-top: 10px; /* Add spacing between the button and the history */
+    max-width: 600px; /* Optional: Limit the width of the history */
+    word-wrap: break-word; /* Ensure long text wraps properly */
+}
+
+#clear-log-container {
+    display: flex;
+    justify-content: center; /* Center the Clear History button */
+    margin-top: 10px;
+}
+
+#clearHistoryButton {
+    padding: 10px;
+    font-size: 16px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#clearHistoryButton:hover {
+    background-color: #c82333;
 }
