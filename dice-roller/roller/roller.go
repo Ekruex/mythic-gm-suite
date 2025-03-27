@@ -21,7 +21,7 @@ func SetBroadcastChannel(bc chan string) {
 var (
 	rollLog    []string
 	mu         sync.Mutex // Ensures safe concurrent access
-	maxLogSize = 100      // Limit the roll history to 100 entries
+	maxLogSize = 20       // Limit the roll history to 20 entries
 )
 
 func RollMultiple(d dice.Dice, times int, modifier ...int) ([]int, string, error) {
@@ -79,8 +79,14 @@ func storeRoll(entry string) {
 		rollLog = rollLog[1:] // Remove the oldest entry
 	}
 
+	// Reverse the rollLog for broadcasting
+	reversedLog := make([]string, len(rollLog))
+	for i, v := range rollLog {
+		reversedLog[len(rollLog)-1-i] = v
+	}
+
 	// Broadcast the updated history
-	updatedHistory := strings.Join(rollLog, "\n")
+	updatedHistory := strings.Join(reversedLog, "\n")
 	broadcast <- fmt.Sprintf(`{"type": "history", "history": %q}`, updatedHistory)
 }
 
