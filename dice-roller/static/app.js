@@ -1,7 +1,64 @@
+// Declare WebSocket variable in the global scope
+let socket;
+
 document.addEventListener("DOMContentLoaded", function () {
     const promptInput = document.getElementById("promptInput");
     let fortuneActive = false;
     let misfortuneActive = false;
+
+    // Initialize WebSocket connection
+    socket = new WebSocket("ws://localhost:8080/ws");
+
+    socket.onopen = () => {
+        console.log("WebSocket connection established");
+
+        // Fetch roll history once the WebSocket connection is open
+        fetchHistory();
+    };
+
+    socket.onmessage = (event) => {
+        try {
+            // Parse the JSON response
+            const message = JSON.parse(event.data);
+            console.log("Message from server:", message);
+
+            // Handle different message types
+            if (message.type === "history") {
+                console.log("History response received:", message.history);
+                const history = document.getElementById("history");
+                console.log("History element:", history);
+
+                if (message.history && message.history.trim() !== "") {
+                    // If history is not empty, update the DOM
+                    const sanitizedHistory = message.history
+                        .replace(/\\n/g, "\n") // Replace escaped newlines with actual newlines
+                        .split("\n")
+                        .map((entry) => `<div>${entry}</div>`)
+                        .join("");
+                    history.innerHTML = sanitizedHistory;
+                } else {
+                    // If history is empty, display a placeholder message
+                    history.innerHTML = "<div>No roll history available.</div>";
+                }
+            } else if (message.type === "rollResult") {
+                document.getElementById("rollResult").textContent = message.result;
+            } else if (message.type === "success") {
+                console.log(message.message); // Log success messages
+            } else if (message.type === "error") {
+                console.error(message.message); // Log error messages
+            }
+        } catch (error) {
+            console.error("Failed to parse server response:", event.data, error);
+        }
+    };
+
+    socket.onclose = () => {
+        console.log("WebSocket connection closed");
+    };
+
+    socket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+    };
 
     // Intercept the Enter key globally and trigger the Roll button only when focused on the input field
     document.addEventListener("keydown", function (event) {
@@ -9,7 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (event.key === "Enter" && activeElement.id === "promptInput") {
             event.preventDefault(); // Prevent the default behavior of Enter
             document.getElementById("rollButton").click(); // Simulate a click on the Roll button
-     }
+        }
     });
 
     // Function to handle button clicks and update the promptInput
@@ -70,34 +127,32 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log(`Roll type: ${rollType}`); // Debug log
         console.log(`Fortune active: ${fortuneActive}, Misfortune active: ${misfortuneActive}`); // Debug log
 
-        fetch(`/api/roll?prompt=${encodeURIComponent(prompt)}&type=${rollType}`)
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
-                }
-                return response.text();
-            })
-            .then((result) => {
-                document.getElementById("rollResult").textContent = result;
-                // Fetch the updated history after the roll
-                fetchHistory();
-            })
-            .catch((error) => {
-                console.error("Error fetching roll result:", error);
-                alert("An error occurred while fetching the roll result. Please try again.");
-            });
+        if (socket.readyState === WebSocket.OPEN) {
+            // Send roll request via WebSocket
+            socket.send(
+                JSON.stringify({
+                    type: "roll",
+                    prompt: prompt,
+                    rollType: rollType,
+                })
+            );
+        } else {
+            console.error("WebSocket is not open. Cannot send roll request.");
+        }
     });
 
     // Handle the Clear History button
     document.getElementById("clearHistoryButton").addEventListener("click", function () {
-        // Clear the roll history
-        fetch("/api/clear-history", { method: "POST" })
-            .then(() => {
-                document.getElementById("history").textContent = "History cleared.";
-            })
-            .catch((error) => {
-                console.error("Error clearing history:", error);
-            });
+        if (socket.readyState === WebSocket.OPEN) {
+            // Send clear history request via WebSocket
+            socket.send(
+                JSON.stringify({
+                    type: "clear-history",
+                })
+            );
+        } else {
+            console.error("WebSocket is not open. Cannot clear history.");
+        }
     });
 
     // Handle Fortune and Misfortune checkboxes
@@ -118,16 +173,19 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("fortuneCheckbox").checked = false;
         }
     });
-
-    // Fetch roll history on page load
-    function fetchHistory() {
-        fetch("/api/history")
-            .then((response) => response.text())
-            .then((data) => {
-                const history = document.getElementById("history");
-                history.innerHTML = data.split("\n").map((entry) => `<div>${entry}</div>`).join("");
-            });
-    }
-
-    fetchHistory();
 });
+
+// Fetch roll history
+function fetchHistory() {
+    console.log("Fetching roll history...");
+    if (socket.readyState === WebSocket.OPEN) {
+        console.log("WebSocket is open. Sending history request...");
+        socket.send(
+            JSON.stringify({
+                type: "history",
+            })
+        );
+    } else {
+        console.error("WebSocket is not open. Cannot fetch history.");
+    }
+}

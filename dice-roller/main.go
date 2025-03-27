@@ -1,23 +1,31 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/Ekruex/mythic-gm-suite/dice-roller/dice"
 	"github.com/Ekruex/mythic-gm-suite/dice-roller/roller"
+	"github.com/gorilla/websocket"
 )
 
-func main() {
-	http.HandleFunc("/api/roll", handleRoll)
-	http.HandleFunc("/api/fortune", handleFortune)
-	http.HandleFunc("/api/misfortune", handleMisfortune)
-	http.HandleFunc("/api/history", handleHistory)
-	http.HandleFunc("/api/clear-history", handleClearHistory)
+// WebSocket upgrader
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // Allow all origins for now (adjust for production)
+	},
+}
 
+func main() {
+	// WebSocket handler
+	http.HandleFunc("/ws", handleWebSocket)
+
+	// Serve static files
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/", fs)
 
@@ -25,84 +33,110 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func handleRoll(w http.ResponseWriter, r *http.Request) {
-	prompt := r.URL.Query().Get("prompt")
-	rollType := r.URL.Query().Get("type") // Get the type parameter
-
-	if prompt == "" {
-		http.Error(w, "Missing roll prompt", http.StatusBadRequest)
+// WebSocket handler
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Upgrade HTTP to WebSocket
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		fmt.Println("Error upgrading connection:", err)
 		return
 	}
+	defer conn.Close()
 
-	var result string
-	var err error
+	fmt.Println("WebSocket connection established")
 
-	// Determine which roll function to call based on the type parameter
-	switch rollType {
-	case "fortune":
-		_, result, err = parseAndRollWithFortune(prompt)
-	case "misfortune":
-		_, result, err = parseAndRollWithMisfortune(prompt)
+	for {
+		// Read message from client
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			fmt.Println("Error reading message:", err)
+			break
+		}
+		fmt.Printf("Received: %s\n", msg)
+
+		// Process the message
+		response := processWebSocketMessage(string(msg))
+
+		// Send response back to client
+		err = conn.WriteMessage(websocket.TextMessage, []byte(response))
+		if err != nil {
+			fmt.Println("Error writing message:", err)
+			break
+		}
+	}
+}
+
+func processWebSocketMessage(msg string) string {
+	// Parse the message as JSON
+	var request map[string]interface{}
+	err := json.Unmarshal([]byte(msg), &request)
+	if err != nil {
+		return `{"type": "error", "message": "Invalid JSON format"}`
+	}
+
+	// Log the received message
+	fmt.Printf("Received message: %s\n", msg)
+
+	// Handle different message types
+	switch request["type"] {
+	case "roll":
+		prompt, ok := request["prompt"].(string)
+		if !ok {
+			return `{"type": "error", "message": "Invalid roll prompt"}`
+		}
+		if prompt == "" {
+			return `{"type": "error", "message": "Roll prompt cannot be empty"}`
+		}
+
+		rollType, ok := request["rollType"].(string)
+		if !ok {
+			rollType = "normal" // Default to "normal" if rollType is missing
+		}
+		fmt.Printf("Roll type: %s\n", rollType) // Log the rollType
+
+		// Handle roll types: normal, fortune, misfortune
+		switch rollType {
+		case "fortune":
+			_, result, err := parseAndRollWithFortune(prompt)
+			if err != nil {
+				return fmt.Sprintf(`{"type": "error", "message": "%s"}`, err.Error())
+			}
+			return fmt.Sprintf(`{"type": "rollResult", "result": "%s"}`, result)
+		case "misfortune":
+			_, result, err := parseAndRollWithMisfortune(prompt)
+			if err != nil {
+				return fmt.Sprintf(`{"type": "error", "message": "%s"}`, err.Error())
+			}
+			return fmt.Sprintf(`{"type": "rollResult", "result": "%s"}`, result)
+		default: // Normal roll
+			_, result, err := parseAndRoll(prompt)
+			if err != nil {
+				return fmt.Sprintf(`{"type": "error", "message": "%s"}`, err.Error())
+			}
+			return fmt.Sprintf(`{"type": "rollResult", "result": "%s"}`, result)
+		}
+	case "history":
+		history := roller.GetRollHistory()
+		fmt.Println("Processing history request")
+
+		// Use json.Marshal to escape special characters, including newlines
+		escapedHistory, err := json.Marshal(strings.Join(history, "\n"))
+		if err != nil {
+			fmt.Printf("Error marshaling history: %v\n", err)
+			return `{"type": "error", "message": "Failed to retrieve roll history"}`
+		}
+
+		// Properly format the JSON response
+		return fmt.Sprintf(`{"type": "history", "history": %s}`, string(escapedHistory))
+	case "clear-history":
+		roller.ClearRollHistory()
+		return `{"type": "success", "message": "Roll history cleared"}`
 	default:
-		_, result, err = parseAndRoll(prompt)
-	}
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Fprintf(w, "Roll Result: %s", result)
-}
-
-func handleFortune(w http.ResponseWriter, r *http.Request) {
-	prompt := r.URL.Query().Get("prompt")
-	if prompt == "" {
-		http.Error(w, "Missing roll prompt", http.StatusBadRequest)
-		return
-	}
-
-	_, result, err := parseAndRollWithFortune(prompt)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Fprintf(w, "Roll Result: %s", result)
-}
-
-func handleMisfortune(w http.ResponseWriter, r *http.Request) {
-	prompt := r.URL.Query().Get("prompt")
-	if prompt == "" {
-		http.Error(w, "Missing roll prompt", http.StatusBadRequest)
-		return
-	}
-
-	_, result, err := parseAndRollWithMisfortune(prompt)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Fprintf(w, "Roll Result: %s", result)
-}
-
-func handleHistory(w http.ResponseWriter, r *http.Request) {
-	history := roller.GetRollHistory()
-	// Reverse the order of the history entries
-	for i, j := 0, len(history)-1; i < j; i, j = i+1, j-1 {
-		history[i], history[j] = history[j], history[i]
-	}
-	for _, entry := range history {
-		fmt.Fprintf(w, "%s\n", entry)
+		return `{"type": "error", "message": "Unknown message type"}`
 	}
 }
 
-func handleClearHistory(w http.ResponseWriter, r *http.Request) {
-	roller.ClearRollHistory()
-	fmt.Fprintln(w, "Roll history cleared")
-}
-
+// functions for dice rolling logic
 func parseAndRoll(prompt string) ([]int, string, error) {
 	re := regexp.MustCompile(`(\d*)d(\d+)([+-]\d+)?`)
 	matches := re.FindStringSubmatch(prompt)
@@ -151,7 +185,6 @@ func parseAndRollWithFortune(prompt string) ([]int, string, error) {
 		return nil, "", err
 	}
 
-	// ✅ FIX: Return details directly (it already includes modifier)
 	return []int{highest}, details, nil
 }
 
@@ -177,6 +210,5 @@ func parseAndRollWithMisfortune(prompt string) ([]int, string, error) {
 		return nil, "", err
 	}
 
-	// ✅ FIX: Return details directly (it already includes modifier)
 	return []int{lowest}, details, nil
 }
