@@ -10,6 +10,13 @@ import (
 	"github.com/Ekruex/mythic-gm-suite/dice-roller/dice"
 )
 
+var broadcast chan string // Declare the broadcast channel in the roller package
+
+// SetBroadcastChannel sets the broadcast channel for the roller package
+func SetBroadcastChannel(bc chan string) {
+	broadcast = bc
+}
+
 // RollLog stores previous roll results
 var (
 	rollLog    []string
@@ -67,17 +74,14 @@ func storeRoll(entry string) {
 	// Add the new entry to the log
 	rollLog = append(rollLog, entry)
 
-	// Debug log to show the updated rollLog
-	fmt.Printf("Updated rollLog before trimming: %v\n", rollLog)
-
 	// Enforce the maximum log size
 	if len(rollLog) > maxLogSize {
-		rollLog = rollLog[1:]                                     // Remove the oldest entry
-		fmt.Printf("Roll log trimmed to max size: %v\n", rollLog) // Debug log
+		rollLog = rollLog[1:] // Remove the oldest entry
 	}
 
-	// Final debug log to confirm the state of rollLog
-	fmt.Printf("Final rollLog after trimming: %v\n", rollLog)
+	// Broadcast the updated history
+	updatedHistory := strings.Join(rollLog, "\n")
+	broadcast <- fmt.Sprintf(`{"type": "history", "history": %q}`, updatedHistory)
 }
 
 // GetRollHistory returns all previous roll results

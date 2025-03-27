@@ -1,51 +1,42 @@
 // Declare WebSocket variable in the global scope
 let socket;
+let reconnectInterval = 5000; // Reconnect every 5 seconds if disconnected
+let reconnectAttempts = 0; // Track the number of reconnection attempts
+const maxReconnectAttempts = 5; // Maximum number of reconnection attempts
 
-document.addEventListener("DOMContentLoaded", function () {
-    const promptInput = document.getElementById("promptInput");
-    let fortuneActive = false;
-    let misfortuneActive = false;
-
-    // Initialize WebSocket connection
+function initializeWebSocket() {
     socket = new WebSocket("ws://localhost:8080/ws");
 
     socket.onopen = () => {
         console.log("WebSocket connection established");
-
-        // Fetch roll history once the WebSocket connection is open
-        fetchHistory();
+        reconnectAttempts = 0; // Reset reconnection attempts on successful connection
+        fetchHistory(); // Fetch roll history once connected
     };
 
     socket.onmessage = (event) => {
         try {
-            // Parse the JSON response
             const message = JSON.parse(event.data);
             console.log("Message from server:", message);
 
-            // Handle different message types
             if (message.type === "history") {
                 console.log("History response received:", message.history);
                 const history = document.getElementById("history");
-                console.log("History element:", history);
-
-                if (message.history && message.history.trim() !== "") {
-                    // If history is not empty, update the DOM
+                if (typeof message.history === "string" && message.history.trim() !== "") {
                     const sanitizedHistory = message.history
-                        .replace(/\\n/g, "\n") // Replace escaped newlines with actual newlines
+                        .replace(/\\n/g, "\n")
                         .split("\n")
                         .map((entry) => `<div>${entry}</div>`)
                         .join("");
                     history.innerHTML = sanitizedHistory;
                 } else {
-                    // If history is empty, display a placeholder message
                     history.innerHTML = "<div>No roll history available.</div>";
                 }
             } else if (message.type === "rollResult") {
                 document.getElementById("rollResult").textContent = message.result;
             } else if (message.type === "success") {
-                console.log(message.message); // Log success messages
+                console.log(message.message);
             } else if (message.type === "error") {
-                console.error(message.message); // Log error messages
+                console.error(message.message);
             }
         } catch (error) {
             console.error("Failed to parse server response:", event.data, error);
@@ -53,12 +44,27 @@ document.addEventListener("DOMContentLoaded", function () {
     };
 
     socket.onclose = () => {
-        console.log("WebSocket connection closed");
+        console.log("WebSocket connection closed. Attempting to reconnect...");
+        if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            setTimeout(initializeWebSocket, 5000); // Retry after 5 seconds
+        } else {
+            console.error("Max reconnection attempts reached. Unable to reconnect.");
+        }
     };
 
     socket.onerror = (error) => {
         console.error("WebSocket error:", error);
     };
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const promptInput = document.getElementById("promptInput");
+    let fortuneActive = false;
+    let misfortuneActive = false;
+
+    // Initialize WebSocket connection
+    initializeWebSocket();
 
     // Intercept the Enter key globally and trigger the Roll button only when focused on the input field
     document.addEventListener("keydown", function (event) {
