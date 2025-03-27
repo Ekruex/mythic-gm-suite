@@ -5,7 +5,7 @@ let reconnectAttempts = 0; // Track the number of reconnection attempts
 const maxReconnectAttempts = 5; // Maximum number of reconnection attempts
 
 function initializeWebSocket() {
-    socket = new WebSocket("ws://localhost:8080/ws");
+    socket = new WebSocket("ws://192.168.0.185:8080/ws");
 
     socket.onopen = () => {
         console.log("WebSocket connection established");

@@ -21,7 +21,7 @@ func SetBroadcastChannel(bc chan string) {
 var (
 	rollLog    []string
 	mu         sync.Mutex // Ensures safe concurrent access
-	maxLogSize = 20       // Limit the roll history to 20 entries
+	maxLogSize = 10       // Limit the roll history to 10 entries
 )
 
 func RollMultiple(d dice.Dice, times int, modifier ...int) ([]int, string, error) {
