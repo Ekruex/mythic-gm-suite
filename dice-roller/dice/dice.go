@@ -1,9 +1,68 @@
 package dice
 
 import (
+	"errors" // For creating error messages
 	"math/rand"
+	"strconv" // For converting strings to integers
+	"strings" // For string manipulation
 	"time"
 )
+
+// Parse parses a dice notation string (e.g., "3d6+2d4+5") and returns a list of DiceRoll objects and a total modifier
+func Parse(notation string) ([]DiceRoll, int, error) {
+	// Split the notation into parts (e.g., "3d6+2d4+5" -> ["3d6", "2d4", "+5"])
+	parts := strings.FieldsFunc(notation, func(r rune) bool {
+		return r == '+' || r == '-'
+	})
+
+	var diceRolls []DiceRoll
+	modifier := 0
+
+	for _, part := range parts {
+		if strings.Contains(part, "d") {
+			// Parse dice notation (e.g., "3d6")
+			diceParts := strings.Split(part, "d")
+			if len(diceParts) != 2 {
+				return nil, 0, errors.New("invalid dice notation")
+			}
+
+			// Parse the number of dice
+			numDice, err := strconv.Atoi(diceParts[0])
+			if err != nil || numDice <= 0 {
+				numDice = 1 // Default to 1 die if not specified or invalid
+			}
+
+			// Parse the number of sides
+			sides, err := strconv.Atoi(diceParts[1])
+			if err != nil || sides <= 0 {
+				return nil, 0, errors.New("invalid number of sides")
+			}
+
+			// Add the parsed dice roll to the list
+			diceRolls = append(diceRolls, DiceRoll{
+				Dice:     NewDice(sides),
+				Count:    numDice,
+				Modifier: 0,
+			})
+		} else {
+			// Parse the modifier (e.g., "+5" or "-3")
+			mod, err := strconv.Atoi(part)
+			if err != nil {
+				return nil, 0, errors.New("invalid modifier")
+			}
+			modifier += mod
+		}
+	}
+
+	return diceRolls, modifier, nil
+}
+
+// DiceRoll represents a parsed dice roll
+type DiceRoll struct {
+	Dice     Dice
+	Count    int
+	Modifier int
+}
 
 // Dice represents a single die with a set number of sides
 type Dice struct {

@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/Ekruex/mythic-gm-suite/dice-roller/dice"
 	"github.com/Ekruex/mythic-gm-suite/dice-roller/roller"
 	"github.com/gorilla/websocket"
 )
@@ -24,7 +21,7 @@ type client struct {
 // WebSocket upgrader
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for now (adjust for production)
+		return true // Allow all origins for now
 	},
 }
 
@@ -43,11 +40,16 @@ func main() {
 	// WebSocket handler
 	http.HandleFunc("/ws", handleWebSocket)
 
+	// HTTP handlers
+	http.HandleFunc("/history", roller.HandleFetchHistory) // Fetch roll history
+	http.HandleFunc("/roll", roller.HandleRoll)            // Roll dice
+
 	// Serve static files
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/", fs)
 
-	fmt.Println("Server is running on http://localhost:8080")
+	// Start HTTP server on port 8080
+	fmt.Println("Server is running on http://0.0.0.0:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -55,14 +57,12 @@ func main() {
 func handleBroadcasts() {
 	for {
 		message := <-broadcast
-		fmt.Printf("Broadcasting message: %s\n", message) // Debug log
 		clientsMutex.Lock()
 		for _, c := range clients {
 			c.mutex.Lock()
 			err := c.conn.WriteMessage(websocket.TextMessage, []byte(message))
 			c.mutex.Unlock()
 			if err != nil {
-				fmt.Println("Error broadcasting message:", err)
 				c.conn.Close()
 				delete(clients, c.conn)
 			}
@@ -73,39 +73,49 @@ func handleBroadcasts() {
 
 // WebSocket handler
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Log the incoming WebSocket request headers for debugging
+	log.Printf("WebSocket request headers: %+v\n", r.Header)
+
+	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Println("Error upgrading connection:", err)
+		// Log the error and return an HTTP error response
+		log.Printf("Failed to upgrade WebSocket: %v\n", err)
+		http.Error(w, "Failed to upgrade WebSocket", http.StatusBadRequest)
 		return
 	}
+	log.Println("WebSocket connection successfully upgraded")
+
 	defer func() {
-		fmt.Println("WebSocket connection closed")
 		clientsMutex.Lock()
 		delete(clients, conn)
 		clientsMutex.Unlock()
 		conn.Close()
+		log.Println("WebSocket connection closed")
 	}()
 
-	fmt.Println("WebSocket connection established")
-
+	// Add the WebSocket connection to the clients map
 	clientsMutex.Lock()
 	clients[conn] = &client{conn: conn}
 	clientsMutex.Unlock()
+	log.Println("WebSocket client added to the clients map")
 
+	// Handle incoming WebSocket messages
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			fmt.Printf("Error reading message: %v\n", err)
+			log.Printf("WebSocket read error: %v\n", err)
 			clientsMutex.Lock()
 			delete(clients, conn)
 			clientsMutex.Unlock()
 			break
 		}
-		fmt.Printf("Received message: %s\n", msg)
+		log.Printf("Received WebSocket message: %s\n", string(msg))
 
+		// Process the WebSocket message
 		response := processWebSocketMessage(string(msg))
 
-		// Synchronize writes to the WebSocket connection
+		// Send the response back to the client
 		clientsMutex.Lock()
 		c := clients[conn]
 		clientsMutex.Unlock()
@@ -113,12 +123,13 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		err = c.conn.WriteMessage(websocket.TextMessage, []byte(response))
 		c.mutex.Unlock()
 		if err != nil {
-			fmt.Printf("Error writing message: %v\n", err)
+			log.Printf("WebSocket write error: %v\n", err)
 			clientsMutex.Lock()
 			delete(clients, conn)
 			clientsMutex.Unlock()
 			break
 		}
+		log.Printf("Sent WebSocket response: %s\n", response)
 	}
 }
 
@@ -126,11 +137,8 @@ func processWebSocketMessage(msg string) string {
 	var request map[string]interface{}
 	err := json.Unmarshal([]byte(msg), &request)
 	if err != nil {
-		fmt.Printf("Error parsing JSON: %v\n", err)
 		return `{"type": "error", "message": "Invalid JSON format"}`
 	}
-
-	fmt.Printf("Received message: %s\n", msg)
 
 	switch request["type"] {
 	case "roll":
@@ -146,23 +154,22 @@ func processWebSocketMessage(msg string) string {
 		if !ok {
 			rollType = "normal"
 		}
-		fmt.Printf("Roll type: %s\n", rollType)
 
 		switch rollType {
 		case "fortune":
-			_, result, err := parseAndRollWithFortune(prompt)
+			_, result, err := roller.ParseAndRollWithFortune(prompt)
 			if err != nil {
 				return fmt.Sprintf(`{"type": "error", "message": "%s"}`, err.Error())
 			}
 			return fmt.Sprintf(`{"type": "rollResult", "result": "%s"}`, result)
 		case "misfortune":
-			_, result, err := parseAndRollWithMisfortune(prompt)
+			_, result, err := roller.ParseAndRollWithMisfortune(prompt)
 			if err != nil {
 				return fmt.Sprintf(`{"type": "error", "message": "%s"}`, err.Error())
 			}
 			return fmt.Sprintf(`{"type": "rollResult", "result": "%s"}`, result)
 		default:
-			_, result, err := parseAndRoll(prompt)
+			_, result, err := roller.ParseAndRoll(prompt)
 			if err != nil {
 				return fmt.Sprintf(`{"type": "error", "message": "%s"}`, err.Error())
 			}
@@ -170,17 +177,11 @@ func processWebSocketMessage(msg string) string {
 		}
 	case "history":
 		history := roller.GetRollHistory()
-		fmt.Printf("Retrieved roll history: %v\n", history)
-
 		escapedHistory, err := json.Marshal(strings.Join(history, "\n"))
 		if err != nil {
-			fmt.Printf("Error marshaling history: %v\n", err)
 			return `{"type": "error", "message": "Failed to retrieve roll history"}`
 		}
-
-		response := fmt.Sprintf(`{"type": "history", "history": %s}`, string(escapedHistory))
-		fmt.Printf("History response: %s\n", response)
-		return response
+		return fmt.Sprintf(`{"type": "history", "history": %s}`, string(escapedHistory))
 	case "clear-history":
 		roller.ClearRollHistory()
 		broadcast <- `{"type": "history", "history": ""}`
@@ -188,81 +189,4 @@ func processWebSocketMessage(msg string) string {
 	default:
 		return `{"type": "error", "message": "Unknown message type"}`
 	}
-}
-
-// functions for dice rolling logic
-func parseAndRoll(prompt string) ([]int, string, error) {
-	re := regexp.MustCompile(`(\d*)d(\d+)([+-]\d+)?`)
-	matches := re.FindStringSubmatch(prompt)
-	if len(matches) == 0 {
-		return nil, "", fmt.Errorf("invalid roll prompt")
-	}
-
-	numDice, _ := strconv.Atoi(matches[1])
-	if numDice == 0 {
-		numDice = 1
-	}
-	diceSides, _ := strconv.Atoi(matches[2])
-	modifier := 0
-	if matches[3] != "" {
-		modifier, _ = strconv.Atoi(matches[3])
-	}
-
-	d := dice.NewDice(diceSides)
-	results, formattedResult, err := roller.RollMultiple(d, numDice, modifier)
-	if err != nil {
-		return nil, "", err
-	}
-
-	return results, formattedResult, nil
-}
-
-func parseAndRollWithFortune(prompt string) ([]int, string, error) {
-	re := regexp.MustCompile(`(\d*)d(\d+)([+-]\d+)?`)
-	matches := re.FindStringSubmatch(prompt)
-	if len(matches) == 0 {
-		return nil, "", fmt.Errorf("invalid roll prompt")
-	}
-
-	numDice, _ := strconv.Atoi(matches[1])
-	if numDice != 2 || matches[2] != "20" {
-		return nil, "", fmt.Errorf("fortune only works with 2d20")
-	}
-	modifier := 0
-	if matches[3] != "" {
-		modifier, _ = strconv.Atoi(matches[3])
-	}
-
-	d := dice.NewDice(20)
-	details, highest, err := roller.RollWithFortune(d, modifier)
-	if err != nil {
-		return nil, "", err
-	}
-
-	return []int{highest}, details, nil
-}
-
-func parseAndRollWithMisfortune(prompt string) ([]int, string, error) {
-	re := regexp.MustCompile(`(\d*)d(\d+)([+-]\d+)?`)
-	matches := re.FindStringSubmatch(prompt)
-	if len(matches) == 0 {
-		return nil, "", fmt.Errorf("invalid roll prompt")
-	}
-
-	numDice, _ := strconv.Atoi(matches[1])
-	if numDice != 2 || matches[2] != "20" {
-		return nil, "", fmt.Errorf("misfortune only works with 2d20")
-	}
-	modifier := 0
-	if matches[3] != "" {
-		modifier, _ = strconv.Atoi(matches[3])
-	}
-
-	d := dice.NewDice(20)
-	details, lowest, err := roller.RollWithMisfortune(d, modifier)
-	if err != nil {
-		return nil, "", err
-	}
-
-	return []int{lowest}, details, nil
 }

@@ -1,9 +1,10 @@
 package roller
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"math"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -24,52 +25,209 @@ var (
 	maxLogSize = 10       // Limit the roll history to 10 entries
 )
 
-func RollMultiple(d dice.Dice, times int, modifier ...int) ([]int, string, error) {
-	if times <= 0 {
-		return nil, "", errors.New("times must be greater than 0")
+// HTTP handler for fetching roll history
+func HandleFetchHistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	history := GetRollHistory()
+	json.NewEncoder(w).Encode(map[string]string{
+		"history": strings.Join(history, "\n"),
+	})
+}
+
+// HTTP handler for rolling dice
+func HandleRoll(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Prompt   string `json:"prompt"`
+		RollType string `json:"rollType"`
 	}
-	results := make([]int, times)
-	total := 0
-	mod := getModifier(modifier)
 
-	for i := 0; i < times; i++ {
-		results[i] = d.Roll(0) // Roll without modifier for individual dice
-		total += results[i]
+	// Parse the JSON request
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
 	}
 
-	total += mod // Add modifier to the total
+	// Parse the dice prompt (e.g., "3d6+2d4+5")
+	diceRolls, modifier, err := dice.Parse(request.Prompt)
+	if err != nil {
+		http.Error(w, "Invalid dice prompt", http.StatusBadRequest)
+		return
+	}
 
-	// Check for critical success or failure
-	criticalMessage := ""
-	if d.Sides == 20 {
-		for _, result := range results {
-			if result == 20 {
-				criticalMessage = "Critical Success!"
-			} else if result == 1 {
-				criticalMessage = "Critical Failure!"
-			}
+	// Perform the roll based on the roll type
+	var results []int
+	var formattedResult string
+	var total int
+
+	switch request.RollType {
+	case "fortune":
+		// Ensure only a single d20 roll is allowed for fortune
+		if len(diceRolls) != 1 || diceRolls[0].Dice.Sides != 20 {
+			http.Error(w, "Fortune rolls only apply to a single d20", http.StatusBadRequest)
+			return
+		}
+		results, formattedResult, err = ParseAndRollWithFortune(request.Prompt)
+		if err == nil {
+			total = sum(results) + modifier
+		}
+	case "misfortune":
+		// Ensure only a single d20 roll is allowed for misfortune
+		if len(diceRolls) != 1 || diceRolls[0].Dice.Sides != 20 {
+			http.Error(w, "Misfortune rolls only apply to a single d20", http.StatusBadRequest)
+			return
+		}
+		results, formattedResult, err = ParseAndRollWithMisfortune(request.Prompt)
+		if err == nil {
+			total = sum(results) + modifier
+		}
+	default:
+		// Roll all dice normally
+		results, formattedResult, err = RollMultiple(diceRolls, modifier)
+		if err == nil {
+			total = sum(results) + modifier
 		}
 	}
 
-	// Format the result
-	formattedResult := FormatRollResult(results, mod)
-	if criticalMessage != "" {
-		formattedResult += fmt.Sprintf(" (%s)", criticalMessage)
+	if err != nil {
+		http.Error(w, "Error performing roll: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	fmt.Printf("Formatted roll result: %s\n", formattedResult) // Debug log
+	// Return the roll result as JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"results": results,
+		"total":   total,
+		"result":  formattedResult,
+	})
+}
+
+// ParseAndRollWithFortune parses the dice notation, rolls two dice, and returns the highest result
+func ParseAndRollWithFortune(prompt string) ([]int, string, error) {
+	// Parse the dice notation
+	diceRoll, modifier, err := dice.Parse(prompt)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Ensure this is a d20 roll (Fortune only applies to d20)
+	if len(diceRoll) != 1 || diceRoll[0].Dice.Sides != 20 {
+		return nil, "", fmt.Errorf("fortune only applies to d20 rolls")
+	}
+
+	// Roll twice and take the higher result
+	firstRoll := diceRoll[0].Dice.Roll()
+	secondRoll := diceRoll[0].Dice.Roll()
+	highestRoll := int(math.Max(float64(firstRoll), float64(secondRoll)))
+
+	// Add the modifier to the highest roll
+	total := highestRoll + modifier
+
+	// Format the result
+	formattedResult := fmt.Sprintf("%d / %d (Fortune: %d) + %d = %d", firstRoll, secondRoll, highestRoll, modifier, total)
+
+	return []int{firstRoll, secondRoll}, formattedResult, nil
+}
+
+// ParseAndRollWithMisfortune parses the dice notation, rolls two dice, and returns the lowest result
+func ParseAndRollWithMisfortune(prompt string) ([]int, string, error) {
+	// Parse the dice notation
+	diceRoll, modifier, err := dice.Parse(prompt)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Ensure this is a d20 roll (Misfortune only applies to d20)
+	if len(diceRoll) != 1 || diceRoll[0].Dice.Sides != 20 {
+		return nil, "", fmt.Errorf("misfortune only applies to d20 rolls")
+	}
+
+	// Roll twice and take the lower result
+	firstRoll := diceRoll[0].Dice.Roll()
+	secondRoll := diceRoll[0].Dice.Roll()
+	lowestRoll := int(math.Min(float64(firstRoll), float64(secondRoll)))
+
+	// Add the modifier to the lowest roll
+	total := lowestRoll + modifier
+
+	// Format the result
+	formattedResult := fmt.Sprintf("%d / %d (Misfortune: %d) + %d = %d", firstRoll, secondRoll, lowestRoll, modifier, total)
+
+	return []int{firstRoll, secondRoll}, formattedResult, nil
+}
+
+// ParseAndRoll parses the dice notation, rolls the specified number of dice, and returns the total result
+func ParseAndRoll(prompt string) ([]int, string, error) {
+	// Parse the dice notation
+	diceRoll, modifier, err := dice.Parse(prompt)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Roll the dice
+	results, formattedResult, err := RollMultiple(diceRoll, modifier)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return results, formattedResult, nil
+}
+
+// RollMultiple rolls multiple dice types and returns the results, formatted result, and total
+func RollMultiple(diceRolls []dice.DiceRoll, modifier int) ([]int, string, error) {
+	var results []int
+	total := 0
+	var parts []string
+
+	for _, dr := range diceRolls {
+		for i := 0; i < dr.Count; i++ {
+			roll := dr.Dice.Roll(0) // Roll the die
+			results = append(results, roll)
+			total += roll
+			parts = append(parts, fmt.Sprintf("%d", roll))
+		}
+	}
+
+	// Add the modifier to the total
+	total += modifier
+
+	// Append the modifier to the formatted result
+	if modifier != 0 {
+		parts = append(parts, fmt.Sprintf("%+d", modifier))
+	}
+
+	// Format the result
+	formattedResult := fmt.Sprintf("%s = %d", strings.Join(parts, " + "), total)
+
+	// Store the roll result in history
 	storeRoll(formattedResult)
 
-	// Return the results, formatted result, and no error
 	return results, formattedResult, nil
+}
+
+// FormatRollResult formats dice rolls like "7 + 14 + 5 + 3 + 2 = 31"
+func FormatRollResult(results []int, modifier int) string {
+	var parts []string
+
+	// Convert each roll result to a string
+	for _, roll := range results {
+		parts = append(parts, fmt.Sprintf("%d", roll))
+	}
+
+	// Append the modifier separately
+	if modifier != 0 {
+		parts = append(parts, fmt.Sprintf("%+d", modifier))
+	}
+
+	// Convert to final output string
+	finalResult := fmt.Sprintf("%s = %d", strings.Join(parts, " + "), sum(results)+modifier)
+	return finalResult
 }
 
 // Store roll result in history
 func storeRoll(entry string) {
 	mu.Lock()
 	defer mu.Unlock()
-
-	fmt.Printf("Storing roll: %s\n", entry) // Debug log
 
 	// Add the new entry to the log
 	rollLog = append(rollLog, entry)
@@ -88,16 +246,15 @@ func storeRoll(entry string) {
 	// Broadcast the updated history
 	updatedHistory := strings.Join(reversedLog, "\n")
 	broadcast <- fmt.Sprintf(`{"type": "history", "history": %q}`, updatedHistory)
+
+	// Debug log
+	fmt.Printf("Broadcasting updated history: %s\n", updatedHistory)
 }
 
 // GetRollHistory returns all previous roll results
 func GetRollHistory() []string {
 	mu.Lock()
 	defer mu.Unlock()
-
-	// Debug log before returning the roll history
-	fmt.Printf("Retrieving roll history: %v\n", rollLog) // Debug log
-
 	return append([]string{}, rollLog...) // Return a copy to prevent modification
 }
 
@@ -105,101 +262,7 @@ func GetRollHistory() []string {
 func ClearRollHistory() {
 	mu.Lock()
 	defer mu.Unlock()
-
-	fmt.Println("Clearing roll history...") // Debug log
 	rollLog = []string{}
-	fmt.Printf("Roll history after clearing: %v\n", rollLog) // Debug log
-}
-
-// RollWithFortune rolls two d20s, displays both, and returns the highest before applying modifiers
-func RollWithFortune(d dice.Dice, modifier ...int) (string, int, error) {
-	if d.Sides != 20 {
-		roll := d.Roll(getModifier(modifier))
-		storeRoll(fmt.Sprintf("%d", roll))
-		return fmt.Sprintf("%d", roll), roll, nil // Fortune only applies to d20 rolls
-	}
-	r1, r2 := d.Roll(0), d.Roll(0)
-	highest := int(math.Max(float64(r1), float64(r2)))
-	mod := getModifier(modifier)
-	total := highest + mod
-
-	// Check for critical success or failure
-	criticalMessage := ""
-	if r1 == 20 || r2 == 20 {
-		criticalMessage = "Critical Success!"
-	} else if r1 == 1 || r2 == 1 {
-		criticalMessage = "Critical Failure!"
-	}
-
-	details := fmt.Sprintf("%d / %d", r1, r2)
-	finalResult := fmt.Sprintf("%s + %d = %d", details, mod, total)
-	if criticalMessage != "" {
-		finalResult += fmt.Sprintf(" (%s)", criticalMessage)
-	}
-	storeRoll(finalResult) // Store total result in history
-
-	return finalResult, total, nil
-}
-
-// RollWithMisfortune rolls two d20s, displays both, and returns the lowest before applying modifiers
-func RollWithMisfortune(d dice.Dice, modifier ...int) (string, int, error) {
-	if d.Sides != 20 {
-		roll := d.Roll(getModifier(modifier))
-		storeRoll(fmt.Sprintf("%d", roll))
-		return fmt.Sprintf("%d", roll), roll, nil // Misfortune only applies to d20 rolls
-	}
-	r1, r2 := d.Roll(0), d.Roll(0)
-	lowest := int(math.Min(float64(r1), float64(r2)))
-	mod := getModifier(modifier)
-	total := lowest + mod
-
-	// Check for critical success or failure
-	criticalMessage := ""
-	if r1 == 20 || r2 == 20 {
-		criticalMessage = "Critical Success!"
-	} else if r1 == 1 || r2 == 1 {
-		criticalMessage = "Critical Failure!"
-	}
-
-	details := fmt.Sprintf("%d / %d", r1, r2)
-	finalResult := fmt.Sprintf("%s + %d = %d", details, mod, total)
-	if criticalMessage != "" {
-		finalResult += fmt.Sprintf(" (%s)", criticalMessage)
-	}
-	storeRoll(finalResult) // Store total result in history
-
-	return finalResult, total, nil
-}
-
-// Helper function to safely retrieve the modifier
-func getModifier(modifier []int) int {
-	if len(modifier) > 0 {
-		return modifier[0]
-	}
-	return 0
-}
-
-// FormatRollResult formats dice rolls like "7 + 14 + 5 + 3 + 2 = 31"
-func FormatRollResult(results []int, modifier int) string {
-	var parts []string
-
-	// Convert each roll result to a string
-	for _, roll := range results {
-		parts = append(parts, fmt.Sprintf("%d", roll))
-	}
-
-	// Append the modifier separately
-	if modifier != 0 {
-		if modifier > 0 {
-			parts = append(parts, fmt.Sprintf("%d", modifier))
-		} else {
-			parts = append(parts, fmt.Sprintf("%d", -modifier))
-		}
-	}
-
-	// Convert to final output string
-	finalResult := fmt.Sprintf("%s = %d", strings.Join(parts, " + "), sum(results)+modifier)
-	return finalResult
 }
 
 // Helper function to sum up results

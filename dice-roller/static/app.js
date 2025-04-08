@@ -5,7 +5,7 @@ let reconnectAttempts = 0; // Track the number of reconnection attempts
 const maxReconnectAttempts = 5; // Maximum number of reconnection attempts
 
 function initializeWebSocket() {
-    socket = new WebSocket("ws://192.168.0.185:8080/ws");
+    socket = new WebSocket("wss://ekruex.space/ws");
 
     socket.onopen = () => {
         console.log("WebSocket connection established");
@@ -114,38 +114,47 @@ document.addEventListener("DOMContentLoaded", function () {
         button.addEventListener("click", handleButtonClick);
     });
 
-    // Handle the Roll button
-    document.getElementById("rollButton").addEventListener("click", function () {
-        const prompt = promptInput.value;
-        if (!prompt) {
-            alert("Please enter a roll prompt!");
-            return;
-        }
+   // Handle the Roll button
+document.getElementById("rollButton").addEventListener("click", function () {
+    const prompt = promptInput.value;
+    if (!prompt) {
+        alert("Please enter a roll prompt!");
+        return;
+    }
 
-        // Determine the roll type based on Fortune/Misfortune
-        let rollType = "normal";
-        if (fortuneActive) {
-            rollType = "fortune";
-        } else if (misfortuneActive) {
-            rollType = "misfortune";
-        }
+    // Determine the roll type based on Fortune/Misfortune
+    let rollType = "normal";
+    if (fortuneActive) {
+        rollType = "fortune";
+    } else if (misfortuneActive) {
+        rollType = "misfortune";
+    }
 
-        console.log(`Roll type: ${rollType}`); // Debug log
-        console.log(`Fortune active: ${fortuneActive}, Misfortune active: ${misfortuneActive}`); // Debug log
+    console.log(`Roll type: ${rollType}`); // Debug log
 
-        if (socket.readyState === WebSocket.OPEN) {
-            // Send roll request via WebSocket
-            socket.send(
-                JSON.stringify({
-                    type: "roll",
-                    prompt: prompt,
-                    rollType: rollType,
-                })
-            );
-        } else {
-            console.error("WebSocket is not open. Cannot send roll request.");
-        }
-    });
+    // Send roll request via HTTP
+    fetch("/roll", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            prompt: prompt,
+            rollType: rollType,
+        }),
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.result) {
+                document.getElementById("rollResult").textContent = data.result;
+            } else {
+                console.error("Error in roll response:", data.error);
+            }
+        })
+        .catch((error) => {
+            console.error("Failed to send roll request:", error);
+        });
+});
 
     // Handle the Clear History button
     document.getElementById("clearHistoryButton").addEventListener("click", function () {
@@ -181,17 +190,24 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-// Fetch roll history
+// Fetch roll history using HTTP
 function fetchHistory() {
-    console.log("Fetching roll history...");
-    if (socket.readyState === WebSocket.OPEN) {
-        console.log("WebSocket is open. Sending history request...");
-        socket.send(
-            JSON.stringify({
-                type: "history",
-            })
-        );
-    } else {
-        console.error("WebSocket is not open. Cannot fetch history.");
-    }
+    console.log("Fetching roll history via HTTP...");
+    fetch("/history")
+        .then((response) => response.json())
+        .then((data) => {
+            const history = document.getElementById("history");
+            if (data.history && data.history.trim() !== "") {
+                const sanitizedHistory = data.history
+                    .split("\n")
+                    .map((entry) => `<div>${entry}</div>`)
+                    .join("");
+                history.innerHTML = sanitizedHistory;
+            } else {
+                history.innerHTML = "<div>No roll history available.</div>";
+            }
+        })
+        .catch((error) => {
+            console.error("Failed to fetch roll history:", error);
+        });
 }
