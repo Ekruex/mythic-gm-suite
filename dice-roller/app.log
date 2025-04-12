@@ -1,9 +1,18 @@
 Server is running on http://0.0.0.0:8080
-2025/04/12 20:44:41 WebSocket request headers: map[Accept-Encoding:[gzip, deflate, br, zstd] Accept-Language:[nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7,nl-NL;q=0.6] Cache-Control:[no-cache] Connection:[{>Connection}] Origin:[http://localhost:8080] Pragma:[no-cache] Sec-Websocket-Extensions:[permessage-deflate; client_max_window_bits] Sec-Websocket-Key:[ZGy40CZbvbgijcAKPtPKPw==] Sec-Websocket-Version:[13] Upgrade:[{>Upgrade}] User-Agent:[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36] X-Forwarded-For:[192.168.0.1] X-Forwarded-Host:[ekruex.space] X-Forwarded-Proto:[https]]
-2025/04/12 20:44:41 Failed to upgrade WebSocket: websocket: the client is not using the websocket protocol: 'upgrade' token not found in 'Connection' header
-2025/04/12 20:44:41 http: superfluous response.WriteHeader call from main.handleWebSocket (main.go:84)
-Broadcasting updated history: 19 + 4 = 23
-2025/04/12 20:44:47 WebSocket request headers: map[Accept-Encoding:[gzip, deflate, br, zstd] Accept-Language:[nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7,nl-NL;q=0.6] Cache-Control:[no-cache] Connection:[{>Connection}] Origin:[http://localhost:8080] Pragma:[no-cache] Sec-Websocket-Extensions:[permessage-deflate; client_max_window_bits] Sec-Websocket-Key:[QEasFG4aZKsceAmnOrikDw==] Sec-Websocket-Version:[13] Upgrade:[{>Upgrade}] User-Agent:[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36] X-Forwarded-For:[192.168.0.1] X-Forwarded-Host:[ekruex.space] X-Forwarded-Proto:[https]]
+2025/04/12 21:19:26 WebSocket request headers: map[Accept-Encoding:[gzip, deflate, br, zstd] Accept-Language:[nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7,nl-NL;q=0.6] Cache-Control:[no-cache] Connection:[Upgrade] Origin:[https://ekruex.space] Pragma:[no-cache] Sec-Websocket-Extensions:[permessage-deflate; client_max_window_bits] Sec-Websocket-Key:[O2HzcuGsaRDP6e63ic1rGw==] Sec-Websocket-Version:[13] Upgrade:[websocket] User-Agent:[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36] X-Forwarded-For:[192.168.0.1] X-Forwarded-Host:[ekruex.space] X-Forwarded-Proto:[https]]
+2025/04/12 21:19:26 WebSocket connection successfully upgraded
+2025/04/12 21:19:26 WebSocket client added to the clients map
+Broadcasting updated history: 12 + 13 = 25
+Broadcasting updated history: 11 + 20 = 31
+12 + 13 = 25
+Broadcasting updated history: 20 + 13 = 33
+11 + 20 = 31
+12 + 13 = 25
+Broadcasting updated history: 20 + 12 = 32
+20 + 13 = 33
+11 + 20 = 31
+12 + 13 = 25
+g:[gzip, deflate, br, zstd] Accept-Language:[nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7,nl-NL;q=0.6] Cache-Control:[no-cache] Connection:[{>Connection}] Origin:[http://localhost:8080] Pragma:[no-cache] Sec-Websocket-Extensions:[permessage-deflate; client_max_window_bits] Sec-Websocket-Key:[QEasFG4aZKsceAmnOrikDw==] Sec-Websocket-Version:[13] Upgrade:[{>Upgrade}] User-Agent:[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36] X-Forwarded-For:[192.168.0.1] X-Forwarded-Host:[ekruex.space] X-Forwarded-Proto:[https]]
 2025/04/12 20:44:47 Failed to upgrade WebSocket: websocket: the client is not using the websocket protocol: 'upgrade' token not found in 'Connection' header
 2025/04/12 20:44:47 http: superfluous response.WriteHeader call from main.handleWebSocket (main.go:84)
 2025/04/12 20:44:52 WebSocket request headers: map[Accept-Encoding:[gzip, deflate, br, zstd] Accept-Language:[nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7,nl-NL;q=0.6] Cache-Control:[no-cache] Connection:[{>Connection}] Origin:[http://localhost:8080] Pragma:[no-cache] Sec-Websocket-Extensions:[permessage-deflate; client_max_window_bits] Sec-Websocket-Key:[EWbLAlp5wp4ttlZX4NaKXw==] Sec-Websocket-Version:[13] Upgrade:[{>Upgrade}] User-Agent:[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36] X-Forwarded-For:[192.168.0.1] X-Forwarded-Host:[ekruex.space] X-Forwarded-Proto:[https]]
@@ -117,3 +126,13 @@ Broadcasting updated history: 16 = 16
 2025/04/12 20:50:45 WebSocket request headers: map[Accept-Encoding:[gzip, deflate, br, zstd] Accept-Language:[nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7,nl-NL;q=0.6] Cache-Control:[no-cache] Connection:[Upgrade] Origin:[http://localhost:8080] Pragma:[no-cache] Sec-Websocket-Extensions:[permessage-deflate; client_max_window_bits] Sec-Websocket-Key:[60wfnVcuRZp5k0afytCI2Q==] Sec-Websocket-Version:[13] Upgrade:[websocket] User-Agent:[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36] X-Forwarded-For:[192.168.0.1] X-Forwarded-Host:[ekruex.space] X-Forwarded-Proto:[https]]
 2025/04/12 20:50:45 WebSocket connection successfully upgraded
 2025/04/12 20:50:45 WebSocket client added to the clients map
+2025/04/12 20:56:42 WebSocket read error: websocket: close 1005 (no status)
+2025/04/12 20:56:42 WebSocket connection closed
+2025/04/12 20:59:04 WebSocket read error: websocket: close 1001 (going away)
+2025/04/12 20:59:04 WebSocket connection closed
+2025/04/12 20:59:04 WebSocket request headers: map[Accept-Encoding:[gzip, deflate, br, zstd] Accept-Language:[nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7,nl-NL;q=0.6] Cache-Control:[no-cache] Connection:[Upgrade] Origin:[https://ekruex.space] Pragma:[no-cache] Sec-Websocket-Extensions:[permessage-deflate; client_max_window_bits] Sec-Websocket-Key:[AlveZrRPccbGMi1A5gx48g==] Sec-Websocket-Version:[13] Upgrade:[websocket] User-Agent:[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36] X-Forwarded-For:[192.168.0.1] X-Forwarded-Host:[ekruex.space] X-Forwarded-Proto:[https]]
+2025/04/12 20:59:04 WebSocket connection successfully upgraded
+2025/04/12 20:59:04 WebSocket client added to the clients map
+2025/04/12 21:01:25 WebSocket read error: websocket: close 1001 (going away)
+2025/04/12 21:01:25 WebSocket connection closed
+signal: killed

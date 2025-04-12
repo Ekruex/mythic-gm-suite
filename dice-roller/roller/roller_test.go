@@ -8,15 +8,16 @@ import (
 
 func TestRollMultiple(t *testing.T) {
 	d := dice.NewDice(6)
-	results, formattedResult, err := RollMultiple(d, 3)
+	rolls := []dice.DiceRoll{d.Roll(), d.Roll(), d.Roll()}
+	results, formattedResult, err := RollMultiple(rolls, 3)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 	if len(results) != 3 {
 		t.Errorf("Expected 3 results, got %d", len(results))
 	}
-	total := sum(results)
-	expectedFormattedResult := FormatRollResult(results, 0)
+	total := Sum(results)
+	expectedFormattedResult := FormatRollResult(results, 3)
 	if formattedResult != expectedFormattedResult {
 		t.Errorf("Expected formatted result %s, got %s", expectedFormattedResult, formattedResult)
 	}
@@ -66,7 +67,7 @@ func TestFormatRollResult(t *testing.T) {
 func TestSum(t *testing.T) {
 	results := []int{6, 1, 12}
 	expected := 19
-	total := sum(results)
+	total := Sum(results)
 	if total != expected {
 		t.Errorf("Expected sum %d, got %d", expected, total)
 	}
